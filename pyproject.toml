@@ -1,0 +1,26 @@
+[project]
+name = "googleagent"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Rex6961",email = "aon777ar@gmail.com"}
+]
+readme = "README.md"
+requires-python = "^3.13"
+dependencies = [
+    "google-adk (>=1.18.0,<2.0.0)",
+    "litellm (>=1.80.0,<2.0.0)",
+    "pydantic (>=2.12.4,<3.0.0)",
+]
+
+[tool.poetry]
+packages = [{include = "googleagent", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pylint (>=4.0.4,<5.0.0)"
+]
