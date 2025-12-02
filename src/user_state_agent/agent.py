@@ -3,6 +3,7 @@ Main agent module demonstrating dynamic instruction injection based on session s
 """
 
 import asyncio
+from dotenv import load_dotenv
 from typing import Union, Awaitable
 
 from google.adk.agents import LlmAgent
@@ -10,6 +11,7 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.runners import InMemoryRunner
 from google.genai.types import Content, Part
 
+load_dotenv()
 
 def dynamic_state_instruction_provider(context: ReadonlyContext) -> Union[str, Awaitable[str]]:
     """Dynamically generates the system instruction based on session state.
@@ -22,11 +24,14 @@ def dynamic_state_instruction_provider(context: ReadonlyContext) -> Union[str, A
     """
 
     user_name = context.state.get("user_name", "Mentor")
+    module = context.state.get("module", 0)
+    lesson = context.state.get("lesson", 0)
+
     instruction_template = (
         f"You are street technical mentor and AI Solution Architect. "
         f"You are currently assisting user '{user_name}'. "
         f"Always greet the user by their name and explicitly state that "
-        f"the current topic is Module 1, Lesson 1: State Management. "
+        f"the current topic is Module {module}, Lesson {lesson}: State Management. "
         f"Your response must be concise, professional, and technical."
     )
 
