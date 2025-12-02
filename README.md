@@ -1,4 +1,4 @@
-# Module 1, Lesson 2: State Management & Dynamic Instructions
+# Module 1, Lesson 1: State Management & Dynamic Instructions
 
 This project demonstrates how to implement **Session State** within the Google ADK framework to create dynamic, context-aware agents. It moves beyond static system prompts by using an `InstructionProvider` that alters the agent's persona based on real-time data stored in the session state.
 
@@ -15,7 +15,7 @@ To understand how the components interact, consider the **Restaurant Analogy**:
 
 ### Data Flow Diagram
 
-```mermaid
+```text
 graph TD
     A[User Message] --> R(Runner);
     R --> S[Session Service];
@@ -63,10 +63,10 @@ python -m user_state_agent.agent
 
 ### Expected Output
 
-Because the state contains `user_name: "Алекс"`, the `InstructionProvider` dynamically inserts this into the system prompt.
+Because the state contains `user_name: "Alex"`, the `InstructionProvider` dynamically inserts this into the system prompt.
 
 ```text
---- Starting with State: user_name='Алекс' ---
+--- Starting with State: user_name='Alex' ---
 YOU: Hey, who are you?
 AGENT: Hello Alex. I am your strict technical mentor and AI Solutions Architect.
 We are currently discussing Module 1, Lesson 1: State Management.
