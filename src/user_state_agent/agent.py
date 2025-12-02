@@ -3,15 +3,41 @@ Main agent module demonstrating dynamic instruction injection based on session s
 """
 
 import asyncio
+from typing import Union, Awaitable, Dict, Any
 from dotenv import load_dotenv
-from typing import Union, Awaitable
 
 from google.adk.agents import LlmAgent
 from google.adk.agents.readonly_context import ReadonlyContext
+from google.adk.tools import FunctionTool, ToolContext
 from google.adk.runners import InMemoryRunner
 from google.genai.types import Content, Part
 
 load_dotenv()
+
+
+def memory_writer_tool(key: str, value: str, tool_context: ToolContext) -> Dict[str, Any]:
+    """Use this tool to save specific information
+        about the user (like their name) into the session state.
+
+    Args:
+        key (str): The state variable name.
+        value (str): The value to store.
+        tool_context (ToolContext): The context of the tool (injected automatically).
+
+    Returns:
+        Dict[str, Any]: Status message.
+    """
+
+    tool_context.state[key] = value
+
+    return {
+        "status": "success",
+        "message": f"Successfully saved '{value}' to state key '{key}'."
+    }
+
+memory_writer_tool = FunctionTool(
+    func=memory_writer_tool
+)
 
 def dynamic_state_instruction_provider(context: ReadonlyContext) -> Union[str, Awaitable[str]]:
     """Dynamically generates the system instruction based on session state.
@@ -24,15 +50,13 @@ def dynamic_state_instruction_provider(context: ReadonlyContext) -> Union[str, A
     """
 
     user_name = context.state.get("user_name", "Mentor")
-    module = context.state.get("module", 0)
-    lesson = context.state.get("lesson", 0)
 
     instruction_template = (
-        f"You are street technical mentor and AI Solution Architect. "
-        f"You are currently assisting user '{user_name}'. "
-        f"Always greet the user by their name and explicitly state that "
-        f"the current topic is Module {module}, Lesson {lesson}: State Management. "
-        f"Your response must be concise, professional, and technical."
+        f"You are helpful assistant. "
+        f"You are currently speaking with '{user_name}'. "
+        f"If the user asks you to remember their name or save information, "
+        f"Use the 'MemoryWriterTool'. "
+        f"Always greet the user by the name you currently know them as. "
     )
 
     return instruction_template
@@ -42,7 +66,7 @@ root_agent: LlmAgent = LlmAgent(
     model="gemini-2.5-flash",
     instruction=dynamic_state_instruction_provider,
     description="Agent demonstrating dynamic instructions based on session state.",
-    tools=[]
+    tools=[memory_writer_tool]
 )
 
 
@@ -53,36 +77,41 @@ if __name__=="__main__":
         """
         runner = InMemoryRunner(agent=root_agent, app_name="StateApp")
         user_id = "user_001"
-        session_id = "session_state_demo"
-
-        initial_state = {
-            "user_name": "Alex",
-            "module": 1,
-            "lesson": 1
-        }
+        session_id = "session_write_demo"
 
         await runner.session_service.create_session(
             app_name="StateApp",
             user_id=user_id,
             session_id=session_id,
-            state=initial_state
+            state={}
         )
 
-        user_message = Content(parts=[Part(text="Hey, who are you?")])
-        print("--- Launching with State: user_name='Alex' ---")
-        print(f"YOU: {user_message.parts[0].text}")
+        messages = [
+            "Hey",
+            "Use tool MemoryWriterTool to save key='user_name' and value='Sarah'",
+            "Hey, again"
+        ]
 
-        print("AGENT: ", end="", flush=True)
+        print("--- Start Demo MemoryWriter ---")
 
-        async for event in runner.run_async(
-            user_id=user_id,
-            session_id=session_id,
-            new_message=user_message
-        ):
-            if event.content and event.content.parts:
-                for part in event.content.parts:
-                    if part.text:
-                        print(part.text, end="", flush=True)
-                print()
+        for msg_text in messages:
+            print(f"\nYOU: {msg_text}")
+            user_message = Content(parts=[Part(text=msg_text)])
+
+            print("AGENT: ", end="", flush=True)
+            async for event in runner.run_async(
+                user_id=user_id,
+                session_id=session_id,
+                new_message=user_message
+            ):
+                if event.content and event.content.parts:
+                    for part in event.content.parts:
+                        if part.function_call:
+                            func_name = part.function_call.name
+                            args = part.function_call.args
+                            print(f"\n[🛠️ TOOL CALL: {func_name}({args})]", end="", flush=True)
+                        elif part.text:
+                            print(part.text, end="", flush=True)
+            print()
 
     asyncio.run(run_demo())
